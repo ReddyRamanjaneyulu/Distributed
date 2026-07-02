@@ -16,22 +16,27 @@ export class AuthService {
 
   async register(registerData: RegisterDto): Promise<AuthResponseDto> {
     const existingUser = await this.userService.findByEmail(registerData.email);
+
     if (existingUser) {
       throw new Error('Email already registered');
     }
 
-    const hashedPassword = await bcrypt.hash(registerData.password, 10);
     const user = await this.userService.create({
       email: registerData.email,
-      password: hashedPassword,
+      password: registerData.password, // <-- plain password
     });
 
-    const payload = { email: user.email, sub: user.id };
+    const payload = {
+      email: user.email,
+      sub: user.id,
+    };
+
     const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: 3600, // 1 hour
+      expiresIn: 3600,
     });
+
     const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: 604800, // 7 days
+      expiresIn: 604800,
     });
 
     return {
@@ -39,13 +44,16 @@ export class AuthService {
       refreshToken,
       tokenType: 'Bearer',
       expiresIn: 3600,
-      user: { id: user.id, email: user.email },
+      user: {
+        id: user.id,
+        email: user.email,
+      },
     };
   }
 
   async login(loginData: LoginDto): Promise<AuthResponseDto> {
     const user = await this.userService.findByEmail(loginData.email);
-    if (!user || !(await bcrypt.compare(loginData.password, user.password))) {
+    if (!user || !(await bcrypt.compare(loginData.password, user.passwordHash))) {
       throw new Error('Invalid credentials');
     }
 
@@ -71,7 +79,7 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync(oldRefreshToken);
       const user = await this.userService.findById(payload.sub);
 
-      if (!user || user.deletedAt) {
+      if (!user) {
         throw new Error('Invalid refresh token');
       }
 

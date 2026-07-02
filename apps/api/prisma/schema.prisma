@@ -7,295 +7,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// User account with authentication
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
+  id           String @id @default(cuid())
+  email        String @unique
   passwordHash String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  deletedAt    DateTime?
 
-  memberships  Membership[]
-  apiKeys      APIKey[]
-  sessions     Session[]
-  auditLogs    AuditLog[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@index([email])
-  @@map("users")
+  sessions Session[]
+  apiKeys  ApiKey[]
 }
 
-/// Organization containing projects
-model Organization {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  createdAt   DateTime @default(now())
-  createdBy   String
-  deletedAt   DateTime?
-
-  projects    Project[]
-  members     Membership[]
-  auditLogs   AuditLog[]
-
-  @@index([name])
-  @@map("organizations")
-}
-
-/// Link between users and organizations (RBAC)
-model Membership {
-  id              String   @id @default(uuid())
-  userId          String
-  organizationId  String
-  role            Role     @default(VIEWER)
-  createdAt       DateTime @default(now())
-
-  user            User     @relation(fields: [userId], references: [id])
-  organization    Organization @relation(fields: [organizationId], references: [id])
-
-  @@unique([userId, organizationId])
-  @@index([organizationId, role])
-  @@map("memberships")
-}
-
-/// Project containing queues
-model Project {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  organizationId String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-
-  organization Organization @relation(fields: [organizationId], references: [id])
-  queues      Queue[]
-
-  @@unique([organizationId, name])
-  @@index([organizationId])
-  @@map("projects")
-}
-
-/// Queue configuration with priority and retry policies
-model Queue {
-  id              String    @id @default(uuid())
-  name            String
-  description     String?
-  projectId       String
-  priority        Int       @default(0)
-  concurrency     Int       @default(10)
-  isPaused        Boolean   @default(false)
-  maxRetries      Int       @default(3)
-  visibilityTimeout Int     @default(60)
-  deadLetterQueueId String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  deletedAt       DateTime?
-
-  project         Project   @relation(fields: [projectId], references: [id])
-  deadLetterQueue Queue?    @relation("DeadLetterQueue", fields: [deadLetterQueueId], references: [id])
-  jobs            Job[]
-  retryPolicies   RetryPolicy[]
-
-  @@unique([projectId, name])
-  @@index([projectId])
-  @@map("queues")
-}
-
-/// Job lifecycle with retry tracking
-model Job {
-  id                String    @id @default(uuid())
-  name              String?
-  queueId           String
-  payload           Json
-  status            JobStatus @default(QUEUED)
-  priority          Int       @default(0)
-  retryCount        Int       @default(0)
-  maxRetries        Int       @default(3)
-  retryPolicyId     String?
-  scheduledAt       DateTime?
-  availableAt       DateTime  @default(now())
-  deadlineAt        DateTime?
-  workerId          String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  deletedAt         DateTime?
-
-  queue             Queue     @relation(fields: [queueId], references: [id])
-  retryPolicy       RetryPolicy? @relation(fields: [retryPolicyId], references: [id])
-  worker            Worker?   @relation(fields: [workerId], references: [id])
-  executions        JobExecution[]
-  logs              JobLog[]
-
-  @@index([queueId, status, priority(sort: Desc), availableAt])
-  @@index([workerId])
-  @@index([scheduledAt])
-  @@map("jobs")
-}
-
-/// Job execution records
-model JobExecution {
-  id          String   @id @default(uuid())
-  jobId       String
-  workerId    String?
-  startedAt   DateTime @default(now())
-  finishedAt  DateTime?
-  duration    Int?
-  exitCode    Int?
-  error       Json?
-  succeeded   Boolean  @default(false)
-
-  job         Job      @relation(fields: [jobId], references: [id])
-  worker      Worker?  @relation(fields: [workerId], references: [id])
-
-  @@index([jobId])
-  @@index([workerId])
-  @@map("job_executions")
-}
-
-/// Retry policy configuration
-model RetryPolicy {
-  id                 String   @id @default(uuid())
-  name               String?
-  strategy           RetryStrategy @default(FIXED_DELAY)
-  fixedDelaySeconds  Int?
-  linearFactor       Int?
-  exponentialMultiplier Float?
-  exponentialBase    Float?    @default(2.0)
-
-  queues             Queue[]
-  jobs               Job[]
-
-  @@map("retry_policies")
-}
-
-/// Worker registration and metadata
-model Worker {
-  id           String   @id @default(uuid())
-  name         String?
-  status       WorkerStatus @default(ONLINE)
-  lastHeartbeat DateTime?
-  createdAt    DateTime @default(now())
-  stoppedAt    DateTime?
-
-  jobs         Job[]
-  executions   JobExecution[]
-  heartbeats   WorkerHeartbeat[]
-
-  @@map("workers")
-}
-
-/// Heartbeat tracking for worker liveness
-model WorkerHeartbeat {
-  id           String   @id @default(uuid())
-  workerId     String
-  timestamp    DateTime @default(now())
-  memoryUsage  Float?
-  cpuUsage     Float?
-
-  worker       Worker   @relation(fields: [workerId], references: [id])
-
-  @@index([workerId, timestamp(sort: Desc)])
-  @@map("worker_heartbeats")
-}
-
-/// Job logs for debugging
-model JobLog {
-  id           String   @id @default(uuid())
-  jobId        String
-  executionId  String?
-  level        LogLevel @default(INFO)
-  message      String
-  metadata     Json?
-  createdAt    DateTime @default(now())
-
-  job          Job      @relation(fields: [jobId], references: [id])
-  execution    JobExecution? @relation(fields: [executionId], references: [id])
-
-  @@index([jobId, createdAt(sort: Desc)])
-  @@map("job_logs")
-}
-
-/// Audit trail for security
-model AuditLog {
-  id          String   @id @default(uuid())
-  userId      String?
-  action      String
-  resourceType String
-  resourceId  String?
-  details     Json?
-  ipAddress   String?
-  userAgent   String?
-  createdAt   DateTime @default(now())
-
-  user        User?    @relation(fields: [userId], references: [id])
-
-  @@index([userId])
-  @@index([resourceType, resourceId])
-  @@map("audit_logs")
-}
-
-/// API key for programmatic access
-model APIKey {
-  id          String   @id @default(uuid())
-  userId      String
-  name        String?
-  keyHash     String
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  createdAt   DateTime @default(now())
-
-  user        User     @relation(fields: [userId], references: [id])
-
-  @@index([keyHash])
-  @@map("api_keys")
-}
-
-/// Session management for JWT refresh
 model Session {
-  id          String   @id @default(uuid())
-  userId      String
-  refreshToken String
-  expiresAt   DateTime
-  createdAt   DateTime @default(now())
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
 
-  user        User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
 
-  @@index([refreshToken])
-  @@index([userId])
-  @@map("sessions")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-// Enums
-enum JobStatus {
-  QUEUED
-  SCHEDULED
-  CLAIMED
-  RUNNING
-  COMPLETED
-  FAILED
-  RETRYING
-  CANCELLED
-  DEAD_LETTER
-}
+model ApiKey {
+  id      String @id @default(cuid())
+  userId  String
+  name    String
+  keyHash String @unique
 
-enum RetryStrategy {
-  FIXED_DELAY
-  LINEAR_BACKOFF
-  EXPONENTIAL_BACKOFF
-  CUSTOM
-}
+  createdAt DateTime @default(now())
 
-enum LogLevel {
-  DEBUG
-  INFO
-  WARN
-  ERROR
-  FATAL
-}
-
-enum WorkerStatus {
-  ONLINE
-  OFFLINE
-  PAUSED
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
