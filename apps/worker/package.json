@@ -9,5 +9,8 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest",
     "lint": "eslint \"src/**/*.ts\" --fix"
+  },
+  "devDependencies": {
+    "@nestjs/cli": "^10.4.9"
   }
 }
