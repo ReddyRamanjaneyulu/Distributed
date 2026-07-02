@@ -1,0 +1,194 @@
+generator client {
+    provider = "prisma-client-js"
+  }
+
+  datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+  }
+
+  // UUID type for UUIDv4
+  type UUID = @id string {
+    @default(cuid())
+    @unique
+  }
+
+  model User {
+    id        UUID      @id
+    email     string    @unique
+    password  string    @db.VarChar@hasMany relationship
+    roles     Role[]    @default([])
+
+    // Memberships
+    memberships  Membership[]
+  }
+
+  model Membership {
+    id         UUID      @id
+    userId     UUID      @foreignKey("User.id") @unique
+    organizationId UUID  @foreignKey("Organization.id")
+  }
+
+  model Organization {
+    id                 UUID      @id
+    name               string    @unique
+    description        string?
+    createdAt          DateTime  @default(now())
+    createdByUserId    UUID      @foreignKey("User.id")
+    admins             User[]    @relation("OrganizationAdmins")
+    developers         User[]    @relation("OrganizationDevelopers")
+    viewers            User[]    @relation("OrganizationViewers")
+    projects           Project[]
+  }
+
+  model Project {
+    id                 UUID      @id
+    name               string    @unique
+    description        string?
+    organizationId     UUID      @foreignKey("Organization.id")
+    queues             Queue[]
+    createdAt          DateTime  @default(now())
+  }
+
+  model Queue {
+    id                 UUID      @id
+    name               string    @unique
+    projectId          UUID      @foreignKey("Project.id")
+    description        string?
+    priority           Int       @default(0)  // 0 = normal, 1-100 higher
+    concurrencyLimit   Int       @default(10)
+    isPaused           Boolean   @default(false)
+    maxRetries         Int       @default(3)
+    deadLetterQueue    UUID?     @foreignKey("DeadLetterQueue.id")
+    retryPolicyId      UUID?     @foreignKey("RetryPolicy.id")
+    createdAt          DateTime  @default(now())
+    updatedAt          DateTime  @updatedAt
+
+    // Jobs
+    jobs               Job[]
+    jobExecutions      JobExecution[]
+    jobLogs            JobLog[]
+  }
+
+  model RetryPolicy {
+    id                 UUID      @id
+    name               string    @optional
+    retryStrategy      string    // "fixedDelay", "linearBackoff", "exponentialBackoff",
+  "custom"
+    fixedDelaySeconds  Int?      @when(retryStrategy == "fixedDelay")
+    linearFactor       Int?      @when(retryStrategy == "linearBackoff")
+    exponentialMultiplier Float? @when(retryStrategy == "exponentialBackoff")
+  }
+
+  model Job {
+    id                 UUID      @id
+    name               string?
+    queueId            UUID      @foreignKey("Queue.id")
+    payload            JSON      @db.JSONB // For data
+    createdAt          DateTime  @default(now())
+    lastAttemptAt      DateTime?
+    status             JobStatus @default(QUEUED)
+    retryCount         Int       @default(0)
+    retryPolicyId      UUID?     @foreignKey("RetryPolicy.id")
+    deadlineAt         DateTime?
+    visibilityTimeout  Int?      // seconds
+    deadLetterQueueId  UUID?     @foreignKey("DeadLetterQueue.id")
+
+    // Status history
+    statusHistory      JobStatusEntry[]
+  }
+
+  model JobExecution {
+    id                 UUID      @id
+    jobId              UUID      @foreignKey("Job.id")
+    workerId           UUID?     @foreignKey("Worker.id")
+    startedAt          DateTime  @default(now())
+    finishedAt         DateTime?
+    duration           Int?
+    exitCode           Int?
+    error              JSON?
+    succeeded          Boolean   @default(false)
+    retries            Int       @default(0)
+    payload            JSON      @db.JSONB
+
+    jobLogs            JobLog[]
+  }
+
+  model Worker {
+    id                 UUID      @id
+    name               string
+    heartbeats         WorkerHeartbeat[]
+    assignedJobs       Job[]     @relation("WorkerAssignedJobs")
+
+    // Heartbeats stored in separate table for performance
+  }
+
+  model WorkerHeartbeat {
+    id         UUID      @id
+    workerId   UUID      @foreignKey("Worker.id")
+    heartbeatAt DateTime @default(now())
+    alive       Boolean  @default(true)
+  }
+
+  model DeadLetterQueue {
+    id               UUID      @id
+    queueId          UUID      @foreignKey("Queue.id")
+    jobId            UUID      @foreignKey("Job.id")
+    error            JSON      @db.JSONB
+    createdAt        DateTime  @default(now())
+  }
+
+  model JobLog {
+    id               UUID      @id
+    jobExecutionId   UUID      @foreignKey("JobExecution.id")
+    level            LogLevel  @default(INFO)
+    message          string    @db.Text
+    createdAt        DateTime  @default(now())
+  }
+
+  model LogLevel {
+    enum = ["DEBUG", "INFO", "WARN", "ERROR", "FATAL"]
+  }
+
+  model AuditLog {
+    id               UUID      @id
+    eventType        string    @db.Enum
+    userId           UUID?     @foreignKey("User.id")
+    relatedId        UUID?
+    createdAt        DateTime  @default(now())
+  }
+
+  model APIKey {
+    id       UUID      @id
+    key      string    @unique
+    userId   UUID      @foreignKey("User.id")
+    expiresAt DateTime
+  }
+
+  model Session {
+    id         UUID      @id
+    userId     UUID      @foreignKey("User.id")
+    token      string    @unique
+    expiresAt  DateTime
+  }
+
+  // Enums
+  enum JobStatus {
+    QUEUED
+    SCHEDULED
+    CLAIMED
+    RUNNING
+    COMPLETED
+    FAILED
+    RETRYING
+    CANCELLED
+    DEAD_LETTER
+  }
+
+  enum LogLevel {
+    DEBUG
+    INFO
+    WARN
+    ERROR
+    FATAL
+  }

@@ -1,0 +1,45 @@
+{
+  "name": "distributed-job-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Production-inspired distributed job scheduling platform",
+  "scripts": {
+    "dev": "pnpm --filter @djs/api dev & pnpm --filter @djs/worker dev & pnpm --filter @djs/web dev",
+    "build": "pnpm -r build",
+    "build:api": "pnpm --filter @djs/api build",
+    "build:worker": "pnpm --filter @djs/worker build",
+    "build:web": "pnpm --filter @djs/web build",
+    "lint": "pnpm -r lint",
+    "lint:fix": "pnpm -r lint:fix",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
+    "db:generate": "pnpm --filter @djs/api db:generate",
+    "db:push": "pnpm --filter @djs/api db:push",
+    "db:migrate": "pnpm --filter @djs/api db:migrate",
+    "db:studio": "pnpm --filter @djs/api db:studio",
+    "prepare": "husky install"
+  },
+  "keywords": [
+    "distributed",
+    "job",
+    "scheduler",
+    "queue",
+    "worker"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@commitlint/cli": "^19.0.3",
+    "@commitlint/config-conventional": "^19.0.3",
+    "@types/node": "^20.11.24",
+    "eslint": "^8.57.0",
+    "husky": "^9.0.11",
+    "prettier": "^3.2.5",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

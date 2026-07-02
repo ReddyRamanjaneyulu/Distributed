@@ -1,0 +1,13 @@
+{
+  "name": "@djs/worker",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "nest start --watch",
+    "build": "nest build",
+    "start": "node dist/worker.js",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "test": "jest",
+    "lint": "eslint \"src/**/*.ts\" --fix"
+  }
+}
