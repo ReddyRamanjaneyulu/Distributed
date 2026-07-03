@@ -1,25 +1,24 @@
-import { Controller, Post, Body, HttpStatus } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
+import { Body, Controller, Post } from '@nestjs/common';
+import { AuthService } from '../auth/auth.service';
+import { RegisterDto } from './decorators/dto/register.dto';
+import { LoginDto } from './decorators/dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  async register(@Body() registerData: RegisterDto): Promise<AuthResponseDto> {
-    return this.authService.register(registerData);
+async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto.email, dto.password);
   }
 
   @Post('login')
-  async login(@Body() loginData: LoginDto): Promise<AuthResponseDto> {
-    return this.authService.login(loginData);
+async login(@Body() dto: LoginDto) {
+    return this.authService.login(dto.email, dto.password);
   }
 
-  @Post('refresh-token')
-  async refreshToken(@Body('oldRefreshToken') oldRefreshToken: string): Promise<AuthResponseDto> {
-    return this.authService.refreshToken(oldRefreshToken);
+  @Post('refresh')
+async refreshToken(@Body('refreshToken') refreshToken: string) {
+    return this.authService.sendRefreshToken(refreshToken);
   }
 }

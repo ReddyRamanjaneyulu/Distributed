@@ -1,0 +1,5 @@
+export const DEFAULT_CONCURRENCY = 5;
+
+export const DEFAULT_VISIBILITY_TIMEOUT = 60;
+
+export const DEFAULT_MAX_PRIORITY = 10;

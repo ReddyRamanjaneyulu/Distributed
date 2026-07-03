@@ -1,24 +1,33 @@
-{
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {
+{ 
+  
+
+"compilerOptions": 
+  {
     "module": "commonjs",
     "moduleResolution": "node",
-    "declaration": true,
-    "removeComments": true,
-    "emitDecoratorMetadata": true,
-    "experimentalDecorators": true,
     "target": "ES2022",
-    "sourceMap": true,
+
+    "rootDir": "src",
     "outDir": "./dist",
-    "baseUrl": "./",
+
+    "declaration": true,
+    "sourceMap": true,
+    "removeComments": true,
+
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
     "incremental": true,
     "skipLibCheck": true,
+    "ignoreDeprecations": "5.0",
+
     "strictNullChecks": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false
   },
+
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "test"]
 }

@@ -7,6 +7,8 @@ import Jobs from "./pages/Jobs";
 import Workers from "./pages/Workers";
 import Dlq from "./pages/Dlq";
 import Projects from "./pages/Projects";
+import Login from "./pages/auth/Login"
+import Register from "./pages/auth/Register"
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
             <Route path="/workers" element={<Workers />} />
             <Route path="/dlq" element={<Dlq />} />
             <Route path="/projects" element={<Projects />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
           </Route>
         </Routes>
       </HashRouter>

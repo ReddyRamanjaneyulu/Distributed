@@ -1,22 +1,31 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { AuthModule } from './auth/auth.module';
-import { UsersModule } from './users/users.module';
-import { PrismaModule } from './prisma/prisma.module';
 import { ConfigModule } from '@nestjs/config';
+
+import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
+import { OrganizationsModule } from './organizations';
+import { ProjectsModule } from './projects';
+import { RetryPoliciesModule } from './retry-policies';
+import { QueuesModule } from './queues';
+import { JobsModule } from './jobs';
+import { WorkersModule } from './workers';
+import { ScheduledJobsModule } from './scheduled-jobs';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env.local', '.env'],
     }),
+
     PrismaModule,
     AuthModule,
-    UsersModule,
+    OrganizationsModule,
+    ProjectsModule,
+    RetryPoliciesModule,
+    QueuesModule,
+    JobsModule,
+    WorkersModule,
+    ScheduledJobsModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
 })
 export class AppModule {}

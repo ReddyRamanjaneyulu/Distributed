@@ -1,105 +1,44 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UserService } from '../users/user.service';
-import { User } from '../users/user.entity';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
-import { AuthResponseDto } from './dto/auth-response.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
+import { UsersRepository } from '../repos/users.repository';
+import { RefreshTokensRepository } from '../repos/refresh-tokens.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
-    private userService: UserService,
-    private jwtService: JwtService,
+    private readonly jwtService: JwtService,
+    private readonly usersRepository: UsersRepository,
+    private readonly refreshTokensRepository: RefreshTokensRepository,
   ) {}
 
-  async register(registerData: RegisterDto): Promise<AuthResponseDto> {
-    const existingUser = await this.userService.findByEmail(registerData.email);
-
-    if (existingUser) {
-      throw new Error('Email already registered');
-    }
-
-    const user = await this.userService.create({
-      email: registerData.email,
-      password: registerData.password, // <-- plain password
-    });
-
-    const payload = {
-      email: user.email,
-      sub: user.id,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: 3600,
-    });
-
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: 604800,
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      user: {
-        id: user.id,
-        email: user.email,
-      },
-    };
+  public async register(email: string, password: string) {
+    const passwordHash = await bcrypt.hash(password, 10);
+    return this.usersRepository.create(email, passwordHash);
   }
 
-  async login(loginData: LoginDto): Promise<AuthResponseDto> {
-    const user = await this.userService.findByEmail(loginData.email);
-    if (!user || !(await bcrypt.compare(loginData.password, user.passwordHash))) {
-      throw new Error('Invalid credentials');
+  async login(email: string, password: string) {
+    const user = await this.usersRepository.findByEmail(email);
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
     }
 
-    const payload = { email: user.email, sub: user.id };
-    const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: 3600,
-    });
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: 604800,
-    });
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
 
-    return {
-      accessToken,
-      refreshToken,
-      tokenType: 'Bearer',
-      expiresIn: 3600,
-      user: { id: user.id, email: user.email },
-    };
+    const payload = { sub: user.id, email: user.email };
+    const accessToken = this.jwtService.sign(payload);
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+    await this.refreshTokensRepository.create(user.id, refreshToken);
+
+    return { accessToken, refreshToken };
   }
 
-  async refreshToken(oldRefreshToken: string): Promise<AuthResponseDto> {
-    try {
-      const payload = await this.jwtService.verifyAsync(oldRefreshToken);
-      const user = await this.userService.findById(payload.sub);
-
-      if (!user) {
-        throw new Error('Invalid refresh token');
-      }
-
-      const newPayload = { email: user.email, sub: user.id };
-      const accessToken = await this.jwtService.signAsync(newPayload, {
-        expiresIn: 3600,
-      });
-      const newRefreshToken = await this.jwtService.signAsync(newPayload, {
-        expiresIn: 604800,
-      });
-
-      return {
-        accessToken,
-        refreshToken: newRefreshToken,
-        tokenType: 'Bearer',
-        expiresIn: 3600,
-        user: { id: user.id, email: user.email },
-      };
-    } catch (error) {
-      throw new Error('Invalid refresh token');
-    }
+  async sendRefreshToken(_refreshToken: string) {
+    // Method to handle refresh token logic
+    throw new Error('Method not implemented.');
   }
 }
