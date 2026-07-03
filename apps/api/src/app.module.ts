@@ -10,6 +10,8 @@ import { QueuesModule } from './queues';
 import { JobsModule } from './jobs';
 import { WorkersModule } from './workers';
 import { ScheduledJobsModule } from './scheduled-jobs';
+import { ExecutionModule } from './execution';
+import { RuntimeModule } from './runtime';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { ScheduledJobsModule } from './scheduled-jobs';
     JobsModule,
     WorkersModule,
     ScheduledJobsModule,
+    ExecutionModule,
+    RuntimeModule,
   ],
 })
 export class AppModule {}

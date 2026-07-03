@@ -1,33 +1,27 @@
-{ 
-  
-
-"compilerOptions": 
-  {
+{
+  "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "node",
     "target": "ES2022",
+    "moduleResolution": "node",
 
-    "rootDir": "src",
+    "rootDir": "./src",
     "outDir": "./dist",
-
-    "declaration": true,
-    "sourceMap": true,
-    "removeComments": true,
 
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
 
-    "incremental": true,
+    "useDefineForClassFields": false,
+
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+
+    "strict": false,
     "skipLibCheck": true,
-    "ignoreDeprecations": "5.0",
 
-    "strictNullChecks": true,
-    "noImplicitAny": false,
-    "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false
+    "sourceMap": true,
+    "declaration": true,
+    "incremental": true
   },
-
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "test"]
 }
