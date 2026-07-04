@@ -20,6 +20,7 @@ const workers_1 = require("./workers");
 const scheduled_jobs_1 = require("./scheduled-jobs");
 const execution_1 = require("./execution");
 const runtime_1 = require("./runtime");
+const health_module_1 = require("./health/health.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -40,6 +41,7 @@ exports.AppModule = AppModule = __decorate([
             scheduled_jobs_1.ScheduledJobsModule,
             execution_1.ExecutionModule,
             runtime_1.RuntimeModule,
+            health_module_1.HealthModule,
         ],
     })
 ], AppModule);
