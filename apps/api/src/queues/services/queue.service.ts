@@ -17,6 +17,9 @@ export class QueueService {
     private readonly repository: QueueRepository,
   ) {}
 
+  /**
+   * Create Queue
+   */
   async create(
     dto: CreateQueueDto,
   ): Promise<Queue> {
@@ -35,6 +38,9 @@ export class QueueService {
     return this.repository.create(dto);
   }
 
+  /**
+   * List Queues
+   */
   async findAll(
     page = 1,
     limit = 10,
@@ -47,6 +53,9 @@ export class QueueService {
     );
   }
 
+  /**
+   * Find Queue
+   */
   async findOne(
     id: string,
   ): Promise<Queue> {
@@ -62,16 +71,115 @@ export class QueueService {
     return queue;
   }
 
+  /**
+   * Update Queue
+   */
   async update(
     id: string,
     dto: UpdateQueueDto,
   ): Promise<Queue> {
-    return this.repository.update(id, dto);
+    return this.repository.update(
+      id,
+      dto,
+    );
   }
 
+  /**
+   * Delete Queue
+   */
   async remove(
     id: string,
   ): Promise<Queue> {
     return this.repository.delete(id);
+  }
+
+  /**
+   * Pause Queue
+   */
+  async pause(
+    id: string,
+  ) {
+    return this.repository.pauseQueue(id);
+  }
+
+  /**
+   * Resume Queue
+   */
+  async resume(
+    id: string,
+  ) {
+    return this.repository.resumeQueue(id);
+  }
+
+  /**
+   * Queue Statistics
+   */
+  async statistics(
+    id: string,
+  ) {
+    return this.repository.getQueueStatistics(
+      id,
+    );
+  }
+
+  /**
+   * Queue Metrics
+   */
+  async metrics(
+    id: string,
+  ) {
+    return this.repository.getQueueMetrics(
+      id,
+    );
+  }
+
+  /**
+   * Active Workers
+   */
+  async workers(
+    id: string,
+  ) {
+    return this.repository.getActiveWorkers(
+      id,
+    );
+  }
+
+  /**
+   * Recent Jobs
+   */
+  async jobs(
+    id: string,
+    limit = 20,
+  ) {
+    return this.repository.getRecentJobs(
+      id,
+      limit,
+    );
+  }
+
+  /**
+   * Failed Jobs
+   */
+  async failedJobs(
+    id: string,
+    limit = 50,
+  ) {
+    return this.repository.getFailedJobs(
+      id,
+      limit,
+    );
+  }
+
+  /**
+   * Dead Letter Jobs
+   */
+  async deadJobs(
+    id: string,
+    limit = 50,
+  ) {
+    return this.repository.getDeadJobs(
+      id,
+      limit,
+    );
   }
 }

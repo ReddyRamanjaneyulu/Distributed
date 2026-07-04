@@ -20,35 +20,198 @@ export class ExecutionRepository {
   ) {}
 
   /**
-   * Find next available job
+   * Poll next available job
    */
-  async poll(queueId: string): Promise<Job | null> {
-    return this.prisma.job.findFirst({
+  async poll(
+  queueId: string,
+): Promise<Job | null> {
+
+  // Get queue configuration
+  const queue =
+    await this.prisma.queue.findUnique({
+      where: {
+        id: queueId,
+      },
+    });
+
+  if (!queue) {
+    throw new NotFoundException(
+      'Queue not found',
+    );
+  }
+
+  // Queue paused
+  if (queue.paused) {
+    return null;
+  }
+
+  // Running jobs
+  const running =
+    await this.prisma.job.count({
       where: {
         queueId,
-        status: JobStatus.QUEUED,
-        availableAt: {
-          lte: new Date(),
+        status: {
+          in: [
+            JobStatus.CLAIMED,
+            JobStatus.RUNNING,
+          ],
         },
       },
+    });
 
-      orderBy: [
-        {
-          priority: 'desc',
+  // Concurrency reached
+  if (running >= queue.concurrency) {
+    return null;
+  }
+
+  return this.prisma.job.findFirst({
+    where: {
+      queueId,
+
+      status: JobStatus.QUEUED,
+
+      availableAt: {
+        lte: new Date(),
+      },
+    },
+
+    orderBy: [
+      {
+        priority: 'desc',
+      },
+      {
+        createdAt: 'asc',
+      },
+    ],
+  });
+}
+  /**
+ * Atomically claim a job
+ */
+/**
+ * Atomically claim a job
+ */
+async claim(
+  jobId: string,
+  workerId: string,
+): Promise<Job> {
+  return this.prisma.$transaction(
+    async (tx) => {
+      const updated = await tx.job.updateMany({
+        where: {
+          id: jobId,
+          status: JobStatus.QUEUED,
         },
-        {
-          createdAt: 'asc',
+
+        data: {
+          status: JobStatus.CLAIMED,
+          workerId: workerId,
+          startedAt: new Date(),
         },
-      ],
+      });
+
+      if (updated.count === 0) {
+        throw new Error(
+          'Job has already been claimed by another worker',
+        );
+      }
+
+      return tx.job.findUniqueOrThrow({
+        where: {
+          id: jobId,
+        },
+      });
+    },
+  );
+}
+  /**
+   * Create execution record
+   */
+  async createExecution(
+    jobId: string,
+    workerId: string,
+  ): Promise<JobExecution> {
+    const job =
+      await this.prisma.job.findUnique({
+        where: {
+          id: jobId,
+        },
+      });
+
+    if (!job) {
+      throw new NotFoundException(
+        'Job not found',
+      );
+    }
+
+    return this.prisma.jobExecution.create({
+      data: {
+        attempt:
+          job.attempts + 1,
+
+        status:
+          JobStatus.RUNNING,
+
+        startedAt:
+          new Date(),
+
+        job: {
+          connect: {
+            id: jobId,
+          },
+        },
+
+        worker: {
+          connect: {
+            id: workerId,
+          },
+        },
+      },
+    });
+  }
+    /**
+   * Complete execution
+   */
+  async completeExecution(
+    executionId: string,
+  ): Promise<JobExecution> {
+    return this.prisma.jobExecution.update({
+      where: {
+        id: executionId,
+      },
+
+      data: {
+        status: JobStatus.COMPLETED,
+        finishedAt: new Date(),
+      },
     });
   }
 
   /**
-   * Claim job
+   * Fail execution
    */
-  async claim(
+  async failExecution(
+    executionId: string,
+    message: string,
+  ): Promise<JobExecution> {
+    return this.prisma.jobExecution.update({
+      where: {
+        id: executionId,
+      },
+
+      data: {
+        status: JobStatus.FAILED,
+        finishedAt: new Date(),
+        errorMessage: message,
+      },
+    });
+  }
+
+  /**
+   * Mark job completed
+   */
+  async completeJob(
     jobId: string,
-    workerId: string,
   ): Promise<Job> {
     return this.prisma.job.update({
       where: {
@@ -56,202 +219,118 @@ export class ExecutionRepository {
       },
 
       data: {
-        status: JobStatus.CLAIMED,
-
-        worker: {
-          connect: {
-            id: workerId,
-          },
-        },
-
-        startedAt: new Date(),
+        status: JobStatus.COMPLETED,
+        completedAt: new Date(),
       },
     });
   }
 
   /**
-   * Start execution
+   * Mark job failed
    */
-  async createExecution(
-  jobId: string,
-  workerId: string,
-): Promise<JobExecution> {
-  const job = await this.prisma.job.findUnique({
-    where: {
-      id: jobId,
-    },
-  });
+  async failJob(
+    jobId: string,
+  ): Promise<Job> {
+    return this.prisma.job.update({
+      where: {
+        id: jobId,
+      },
 
-  if (!job) {
-    throw new NotFoundException('Job not found');
+      data: {
+        status: JobStatus.FAILED,
+
+        failedAt: new Date(),
+
+        attempts: {
+          increment: 1,
+        },
+      },
+    });
   }
 
-  return this.prisma.jobExecution.create({
-    data: {
-      attempt: job.attempts + 1,
-
-      status: JobStatus.RUNNING,
-
-      startedAt: new Date(),
-
-      job: {
-        connect: {
-          id: jobId,
-        },
-      },
-
-      worker: {
-        connect: {
-          id: workerId,
-        },
-      },
-    },
-  });
-}
   /**
-   * Complete execution
+   * Retry job
    */
-  async completeExecution(
-  executionId: string,
-): Promise<JobExecution> {
-  return this.prisma.jobExecution.update({
-    where: {
-      id: executionId,
-    },
+  async retryJob(
+    jobId: string,
+    nextRun: Date,
+  ): Promise<Job> {
+    return this.prisma.job.update({
+      where: {
+        id: jobId,
+      },
 
-    data: {
-      finishedAt: new Date(),
+      data: {
+        status: JobStatus.RETRYING,
+        availableAt: nextRun,
+      },
+    });
+  }
 
-      status: JobStatus.COMPLETED,
-    },
-  });
-}
   /**
-   * Fail execution
+   * Cancel job
    */
-  async failExecution(
-  executionId: string,
-  message: string,
-): Promise<JobExecution> {
-  return this.prisma.jobExecution.update({
-    where: {
-      id: executionId,
-    },
+  async cancelJob(
+    jobId: string,
+  ): Promise<Job> {
+    return this.prisma.job.update({
+      where: {
+        id: jobId,
+      },
 
-    data: {
-      finishedAt: new Date(),
+      data: {
+        status: JobStatus.CANCELLED,
+        cancelledAt: new Date(),
+      },
+    });
+  }
+    /**
+   * Move job to Dead Letter Queue
+   */
+  async moveToDeadLetter(
+    jobId: string,
+  ): Promise<Job> {
+    return this.prisma.job.update({
+      where: {
+        id: jobId,
+      },
 
-      status: JobStatus.FAILED,
+      data: {
+        status: JobStatus.DEAD,
+        failedAt: new Date(),
+      },
+    });
+  }
 
-      errorMessage: message,
-    },
-  });
-}
- /**
- * Mark job completed
- */
-async completeJob(
-  jobId: string,
-): Promise<Job> {
-  return this.prisma.job.update({
-    where: {
-      id: jobId,
-    },
-    data: {
-      status: JobStatus.COMPLETED,
-      completedAt: new Date(),
-    },
-  });
-}
-
-/**
- * Create log
- */
-async createLog(
-  jobId: string,
-  executionId: string,
-  level: LogLevel,
-  message: string,
-): Promise<JobLog> {
-  return this.prisma.jobLog.create({
-    data: {
-      job: {
-        connect: {
-          id: jobId,
+  /**
+   * Create execution log
+   */
+  async createLog(
+    jobId: string,
+    executionId: string,
+    level: LogLevel,
+    message: string,
+  ): Promise<JobLog> {
+    return this.prisma.jobLog.create({
+      data: {
+        job: {
+          connect: {
+            id: jobId,
+          },
         },
-      },
 
-      execution: {
-        connect: {
-          id: executionId,
+        execution: {
+          connect: {
+            id: executionId,
+          },
         },
+
+        level,
+        message,
       },
+    });
+  }
 
-      level,
-
-      message,
-    },
-  });
-}
-
-/**
- * Mark job failed
- */
-async failJob(
-  jobId: string,
-): Promise<Job> {
-  return this.prisma.job.update({
-    where: {
-      id: jobId,
-    },
-
-    data: {
-      status: JobStatus.FAILED,
-      failedAt: new Date(),
-
-      attempts: {
-        increment: 1,
-      },
-    },
-  });
-}
-
-/**
- * Retry job
- */
-async retryJob(
-  jobId: string,
-  nextRun: Date,
-): Promise<Job> {
-  return this.prisma.job.update({
-    where: {
-      id: jobId,
-    },
-
-    data: {
-      status: JobStatus.RETRYING,
-      availableAt: nextRun,
-    },
-  });
-}
-
-/**
- * Cancel job
- */
-async cancelJob(
-  jobId: string,
-): Promise<Job> {
-  return this.prisma.job.update({
-    where: {
-      id: jobId,
-    },
-
-    data: {
-      status: JobStatus.CANCELLED,
-      cancelledAt: new Date(),
-    },
-  });
-}
   /**
    * Release worker
    */
@@ -262,6 +341,7 @@ async cancelJob(
       where: {
         id: workerId,
       },
+
       data: {
         lastSeenAt: new Date(),
       },
@@ -278,6 +358,7 @@ async cancelJob(
       where: {
         id,
       },
+
       include: {
         job: true,
         worker: true,

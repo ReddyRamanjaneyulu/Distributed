@@ -67,16 +67,13 @@ export class ExecutionController {
    * Retry execution
    */
   @Post(':executionId/retry')
-  retry(
-    @Param('executionId') executionId: string,
-    @Body('nextRun') nextRun: string,
-  ) {
-    return this.executionService.retry(
-      executionId,
-      new Date(nextRun),
-    );
-  }
-
+retry(
+  @Param('executionId') executionId: string,
+) {
+  return this.executionService.retry(
+    executionId,
+  );
+}
   /**
    * Cancel execution
    */

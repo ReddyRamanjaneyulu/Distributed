@@ -72,19 +72,18 @@ export class WorkerController {
   }
 
   @Post(':id/heartbeat')
-  heartbeat(
-    @Param('id') id: string,
-    @Body() dto: WorkerHeartbeatDto,
-  ) {
-    return this.workerService.heartbeat(
-      id,
-      dto.cpuUsage,
-      dto.memoryUsage,
-      dto.activeJobs,
-      dto.queuedJobs,
-    );
-  }
-
+heartbeat(
+  @Param('id') id: string,
+  @Body() dto: WorkerHeartbeatDto,
+) {
+  return this.workerService.heartbeat(
+    id,
+    dto.cpuUsage,
+    dto.memoryUsage,
+    dto.activeJobs,
+    dto.queuedJobs,
+  );
+}
   @Post(':id/shutdown')
   shutdown(
     @Param('id') id: string,

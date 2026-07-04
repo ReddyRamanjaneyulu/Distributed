@@ -3,6 +3,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import {
+  calculateNextRetry,
+  RetryStrategy,
+} from '../utiles/retry.util';
+
 import { LogLevel } from '@prisma/client';
 
 import { ExecutionRepository } from '../repositories/execution.repository';
@@ -123,26 +128,39 @@ export class ExecutionService {
   }
 
   async retry(
-    executionId: string,
-    nextRun: Date,
-  ) {
-    const execution =
-      await this.repository.findExecution(
-        executionId,
-      );
+  executionId: string,
+) {
+  const execution =
+    await this.repository.findExecution(
+      executionId,
+    );
 
-    if (!execution) {
-      throw new NotFoundException(
-        'Execution not found',
-      );
-    }
-
-    return this.repository.retryJob(
-      execution.jobId,
-      nextRun,
+  if (!execution) {
+    throw new NotFoundException(
+      'Execution not found',
     );
   }
 
+  const job = execution.job;
+
+  if (!job.retryStrategy) {
+    throw new NotFoundException(
+      'Retry strategy not configured',
+    );
+  }
+
+  const nextRun =
+    calculateNextRetry(
+      job.retryStrategy as RetryStrategy,
+      job.baseDelayMs,
+      job.attempts + 1,
+    );
+
+  return this.repository.retryJob(
+    job.id,
+    nextRun,
+  );
+}
   async cancel(
     executionId: string,
   ) {

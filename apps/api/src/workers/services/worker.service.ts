@@ -64,22 +64,7 @@ export class WorkerService {
     return worker;
   }
 
-  async heartbeat(
-    workerId: string,
-    cpuUsage?: number,
-    memoryUsage?: number,
-    activeJobs = 0,
-    queuedJobs = 0,
-  ) {
-    return this.repository.heartbeat(
-      workerId,
-      cpuUsage,
-      memoryUsage,
-      activeJobs,
-      queuedJobs,
-    );
-  }
-
+  
   async update(
     id: string,
     dto: UpdateWorkerDto,
@@ -121,4 +106,19 @@ export class WorkerService {
   ) {
     return this.repository.delete(id);
   }
+  async heartbeat(
+  workerId: string,
+  cpuUsage: number,
+  memoryUsage: number,
+  activeJobs: number,
+  queuedJobs: number,
+) {
+  return this.repository.heartbeat(
+    workerId,
+    cpuUsage,
+    memoryUsage,
+    activeJobs,
+    queuedJobs,
+  );
+}
 }

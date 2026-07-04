@@ -9,6 +9,8 @@ import { RuntimeRepository } from './repositories/runtime.repository';
 import { DispatcherService } from './services/dispatcher.service';
 import { RetryService } from './services/retry.service';
 import { SchedulerService } from './services/scheduler.service';
+import { RuntimeService } from './services/runtime.service';
+import { WorkerMonitorService } from './services/worker-monitor.service'; // or ../workers/services/... depending on where you created it
 
 @Module({
   imports: [
@@ -21,9 +23,12 @@ import { SchedulerService } from './services/scheduler.service';
     DispatcherService,
     RetryService,
     SchedulerService,
+    RuntimeService,
+    WorkerMonitorService,
   ],
   exports: [
     RuntimeRepository,
+    RuntimeService,
   ],
 })
 export class RuntimeModule {}

@@ -112,39 +112,6 @@ export class WorkerRepository {
     };
   }
 
-  async heartbeat(
-    workerId: string,
-    cpuUsage?: number,
-    memoryUsage?: number,
-    activeJobs = 0,
-    queuedJobs = 0,
-  ) {
-    await this.prisma.workerHeartbeat.create({
-      data: {
-        worker: {
-          connect: {
-            id: workerId,
-          },
-        },
-
-        cpuUsage,
-        memoryUsage,
-        activeJobs,
-        queuedJobs,
-      },
-    });
-
-    return this.prisma.worker.update({
-      where: {
-        id: workerId,
-      },
-
-      data: {
-        lastSeenAt: new Date(),
-        status: WorkerStatus.ONLINE,
-      },
-    });
-  }
 
   async update(
     id: string,
@@ -228,4 +195,39 @@ export class WorkerRepository {
       },
     });
   }
+  /**
+ * Send heartbeat
+ */
+async heartbeat(
+  workerId: string,
+  cpuUsage: number,
+  memoryUsage: number,
+  activeJobs: number,
+  queuedJobs: number,
+) {
+  return this.prisma.$transaction(async (tx) => {
+
+    await tx.worker.update({
+      where: {
+        id: workerId,
+      },
+
+      data: {
+        lastSeenAt: new Date(),
+        status: 'ONLINE',
+      },
+    });
+
+    return tx.workerHeartbeat.create({
+      data: {
+        workerId,
+        cpuUsage,
+        memoryUsage,
+        activeJobs,
+        queuedJobs,
+      },
+    });
+
+  });
+}
 }

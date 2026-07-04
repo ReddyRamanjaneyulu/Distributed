@@ -12,6 +12,7 @@ import { WorkersModule } from './workers';
 import { ScheduledJobsModule } from './scheduled-jobs';
 import { ExecutionModule } from './execution';
 import { RuntimeModule } from './runtime';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { RuntimeModule } from './runtime';
     ScheduledJobsModule,
     ExecutionModule,
     RuntimeModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
