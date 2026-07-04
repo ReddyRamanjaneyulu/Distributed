@@ -2,8 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import * as dotenv from 'dotenv';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 import { AppModule } from './app.module';
+
 
 dotenv.config();
 
@@ -16,6 +19,14 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  app.useGlobalFilters(
+    new HttpExceptionFilter(),
+);
+
+app.useGlobalInterceptors(
+  new LoggingInterceptor(),
+);
 
   // Swagger Configuration
   const config = new DocumentBuilder()
