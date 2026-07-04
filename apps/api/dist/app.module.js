@@ -5,6 +5,9 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
@@ -21,6 +24,8 @@ const scheduled_jobs_1 = require("./scheduled-jobs");
 const execution_1 = require("./execution");
 const runtime_1 = require("./runtime");
 const health_module_1 = require("./health/health.module");
+const jwt_config_1 = __importDefault(require("./config/jwt.config"));
+const database_config_1 = __importDefault(require("./config/database.config"));
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -29,6 +34,7 @@ exports.AppModule = AppModule = __decorate([
         imports: [
             config_1.ConfigModule.forRoot({
                 isGlobal: true,
+                load: [jwt_config_1.default, database_config_1.default],
             }),
             prisma_module_1.PrismaModule,
             auth_module_1.AuthModule,

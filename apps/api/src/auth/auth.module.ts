@@ -19,13 +19,15 @@ import { RefreshTokensRepository } from '../repos/refresh-tokens.repository';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('jwt.secret'),
-        signOptions: {
-          expiresIn: config.get<string>('jwt.expiresIn'),
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        console.log('JWT secret from config:', config.get<string>('jwt.secret'));
+        return {
+          secret: config.get<string>('jwt.secret'),
+          signOptions: {
+            expiresIn: config.get<string>('jwt.expiresIn'),
+          },
+        };
+      },
     }),
   ],
 

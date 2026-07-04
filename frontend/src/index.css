@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas text-ink;
+  }
+
+  ::selection {
+    @apply bg-accent/30 text-ink;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #22242e;
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #2c2f3c;
+  }
+
+  :focus-visible {
+    outline: 2px solid #5b8cff;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-canvas-raised border border-border rounded-xl2 shadow-panel;
+  }
+
+  .input-field {
+    @apply w-full bg-canvas-subtle border border-border rounded-lg px-3 py-2 text-sm text-ink
+      placeholder:text-ink-faint focus:border-accent focus:ring-1 focus:ring-accent/50
+      outline-none transition-colors;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2
+      text-sm font-medium text-white transition-all hover:bg-accent-dim
+      active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-border
+      bg-canvas-subtle px-4 py-2 text-sm font-medium text-ink transition-all
+      hover:bg-canvas-raised hover:border-ink-faint active:scale-[0.98]
+      disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-danger/10 border border-danger/30
+      px-4 py-2 text-sm font-medium text-danger transition-all hover:bg-danger/20
+      active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+}

@@ -7,7 +7,6 @@ import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 
 import { AppModule } from './app.module';
 
-
 dotenv.config();
 
 async function bootstrap() {
@@ -22,11 +21,17 @@ async function bootstrap() {
 
   app.useGlobalFilters(
     new HttpExceptionFilter(),
-);
+  );
 
-app.useGlobalInterceptors(
-  new LoggingInterceptor(),
-);
+  app.useGlobalInterceptors(
+    new LoggingInterceptor(),
+  );
+
+  // CORS — allow the Vite dev server to call this API with credentials
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
 
   // Swagger Configuration
   const config = new DocumentBuilder()

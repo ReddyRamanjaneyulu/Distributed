@@ -13,11 +13,14 @@ import { ScheduledJobsModule } from './scheduled-jobs';
 import { ExecutionModule } from './execution';
 import { RuntimeModule } from './runtime';
 import { HealthModule } from './health/health.module';
+import jwtConfig from './config/jwt.config';
+import databaseConfig from './config/database.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      load: [jwtConfig, databaseConfig],
     }),
 
     PrismaModule,

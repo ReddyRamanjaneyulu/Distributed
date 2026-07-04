@@ -1,6 +1,11 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
+
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
+
 import { UsersRepository } from '../repos/users.repository';
 import { RefreshTokensRepository } from '../repos/refresh-tokens.repository';
 
@@ -12,33 +17,72 @@ export class AuthService {
     private readonly refreshTokensRepository: RefreshTokensRepository,
   ) {}
 
-  public async register(email: string, password: string) {
-    const passwordHash = await bcrypt.hash(password, 10);
-    return this.usersRepository.create(email, passwordHash);
+  async register(
+    email: string,
+    password: string,
+  ) {
+    const passwordHash =
+      await bcrypt.hash(password, 10);
+
+    return this.usersRepository.create(
+      email,
+      passwordHash,
+    );
   }
 
-  async login(email: string, password: string) {
-    const user = await this.usersRepository.findByEmail(email);
+  async login(
+    email: string,
+    password: string,
+  ) {
+    const user =
+      await this.usersRepository.findByEmail(
+        email,
+      );
+
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException(
+        'Invalid credentials',
+      );
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+    const valid =
+      await bcrypt.compare(
+        password,
+        user.passwordHash,
+      );
+
+    if (!valid) {
+      throw new UnauthorizedException(
+        'Invalid credentials',
+      );
     }
 
-    const payload = { sub: user.id, email: user.email };
-    const accessToken = this.jwtService.sign(payload);
-    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    const payload = {
+      sub: user.id,
+      email: user.email,
+    };
 
-    await this.refreshTokensRepository.create(user.id, refreshToken);
+    const accessToken =
+      this.jwtService.sign(payload);
 
-    return { accessToken, refreshToken };
-  }
+    const refreshToken =
+      this.jwtService.sign(payload, {
+        expiresIn: '7d',
+      });
 
-  async sendRefreshToken(_refreshToken: string) {
-    // Method to handle refresh token logic
-    throw new Error('Method not implemented.');
+    await this.refreshTokensRepository.create(
+      user.id,
+      refreshToken,
+    );
+
+    return {
+      accessToken,
+      refreshToken,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+      },
+    };
   }
 }
